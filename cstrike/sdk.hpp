@@ -1,6 +1,7 @@
 #ifndef CS_SDK_HPP
 #define CS_SDK_HPP
 
+#include "SDL2/SDL.h"
 typedef int qboolean;
 typedef unsigned int string_t;
 typedef float vec3_t[3];
@@ -8,16 +9,19 @@ typedef int int32;
 typedef int EOFFSET;
 typedef float vec_t;
 typedef unsigned int uint32;
-typedef unsigned int size_t;
+typedef unsigned int _size_t;
+#define size_t _size_t
+typedef unsigned char byte;
 #ifdef _WIN32
 #include <Windows.h>
 #else
 #define FALSE 0
 #define TRUE (!FALSE)
+#define MAX_PATH PATH_MAX
 typedef uint32 ULONG;
 typedef unsigned char BYTE;
 typedef int BOOL;
-#define MAX_PATH PATH_MAX
+typedef void *HWND;
 #endif
 
 typedef enum _fieldtypes {FIELD_FLOAT, FIELD_STRING, FIELD_ENTITY, FIELD_CLASSPTR, FIELD_EHANDLE, FIELD_EVARS, FIELD_EDICT, FIELD_VECTOR, FIELD_POSITION_VECTOR, FIELD_POINTER, FIELD_INTEGER, FIELD_FUNCTION, FIELD_BOOLEAN, FIELD_SHORT, FIELD_CHARACTER, FIELD_TIME, FIELD_MODELNAME, FIELD_SOUNDNAME, FIELD_TYPECOUNT} FIELDTYPE;
@@ -31,6 +35,8 @@ enum ModelName {MODEL_UNASSIGNED, MODEL_URBAN, MODEL_TERROR, MODEL_LEET, MODEL_A
 enum _Menu {Menu_OFF, Menu_ChooseTeam, Menu_IGChooseTeam, Menu_ChooseAppearance, Menu_Buy, Menu_BuyPistol, Menu_BuyRifle, Menu_BuyMachineGun, Menu_BuyShotgun, Menu_BuySubMachineGun, Menu_BuyItem, Menu_Radio1, Menu_Radio2, Menu_Radio3, Menu_ClientBuy};
 typedef enum {PLAYER_IDLE, PLAYER_WALK, PLAYER_JUMP, PLAYER_SUPERJUMP, PLAYER_DIE, PLAYER_ATTACK1, PLAYER_ATTACK2, PLAYER_FLINCH, PLAYER_LARGE_FLINCH, PLAYER_RELOAD, PLAYER_HOLDBOMB} PLAYER_ANIM;
 enum AutoBuyClassType {AUTOBUYCLASS_PRIMARY = 1, AUTOBUYCLASS_SECONDARY, AUTOBUYCLASS_AMMO = 4, AUTOBUYCLASS_ARMOR = 8, AUTOBUYCLASS_DEFUSER = 16, AUTOBUYCLASS_PISTOL = 32, AUTOBUYCLASS_SMG = 64, AUTOBUYCLASS_RIFLE = 128, AUTOBUYCLASS_SNIPERRIFLE = 256, AUTOBUYCLASS_SHOTGUN = 512, AUTOBUYCLASS_MACHINEGUN = 1024, AUTOBUYCLASS_GRENADE = 2048, AUTOBUYCLASS_NIGHTVISION = 4096, AUTOBUYCLASS_SHIELD = 8192};
+typedef enum {mod_brush, mod_sprite, mod_alias, mod_studio} modtype_t;
+typedef enum {ST_SYNC, ST_RAND} synctype_t;
 
 typedef void CSquadMonster;
 typedef void CWeaponBox;
@@ -72,6 +78,42 @@ class CUtlMemory;
 class CUnifiedSignals;
 struct RebuyStruct;
 struct AutoBuyInfoStruct;
+class IGame;
+class CGame;
+struct color24;
+struct entity_state_s;
+struct entity_state_t;
+struct position_history_t;
+struct mouth_t;
+struct latchedvars_t;
+struct model_s;
+struct dmodel_t;
+struct mplane_s;
+struct mplane_t;
+struct mnode_s;
+struct efrag_s;
+struct glpoly_s;
+struct glpoly_t;
+struct texture_s;
+struct texture_t;
+struct mtexinfo_t;
+struct decal_s;
+struct decal_t;
+struct msurface_s;
+struct msurface_t;
+struct mleaf_s;
+struct mleaf_t;
+struct mvertex_t;
+struct medge_t;
+struct mnode_s;
+struct mnode_t;
+struct dclipnode_t;
+struct hull_s;
+struct cache_user_s;
+struct cache_user_t;
+struct model_s;
+struct colorVec;
+struct cl_entity_s;
 
 typedef struct entvars_s {
     string_t classname;
@@ -1312,6 +1354,389 @@ class CBasePlayer : public CBaseMonster {
     bool IsObservingPlayer(CBasePlayer *);
     bool CanSwitchObserverModes(void) const;
     void Intense(void);
+};
+
+class IGame {
+  public:
+    ~IGame();
+    virtual bool Init(void *);
+    virtual bool Shutdown(void);
+    virtual bool CreateGameWindow(void);
+    virtual void SleepUntilInput(int);
+    virtual HWND GetMainWindow(void);
+    virtual HWND * GetMainWindowAddress(void);
+    virtual void SetWindowXY(int, int);
+    virtual void SetWindowSize(int, int);
+    virtual void GetWindowRect(int *, int *, int *, int *);
+    virtual bool IsActiveApp(void);
+    virtual bool IsMultiplayer(void);
+    virtual void PlayStartupVideos(void);
+    virtual void PlayAVIAndWait(const char *);
+    virtual void SetCursorVisible(bool);
+};
+
+class CGame : public IGame {
+  private:
+    bool m_bActiveApp;
+    SDL_Window *m_hSDLWindow;
+    SDL_GLContext m_hSDLGLContext;
+    bool m_bExpectSyntheticMouseMotion;
+    int m_nMouseTargetX;
+    int m_nMouseTargetY;
+    int m_nWarpDelta;
+    bool m_bCursorVisible;
+    int m_x;
+    int m_y;
+    int m_width;
+    int m_height;
+    bool m_bMultiplayer;
+
+  public:
+    CGame(void);
+    ~CGame();
+    virtual bool Init(void *);
+    virtual bool Shutdown(void);
+    virtual bool CreateGameWindow(void);
+    virtual void SleepUntilInput(int);
+    virtual HWND GetMainWindow(void);
+    virtual HWND * GetMainWindowAddress(void);
+    virtual void SetWindowXY(int, int);
+    virtual void SetWindowSize(int, int);
+    virtual void GetWindowRect(int *, int *, int *, int *);
+    virtual bool IsActiveApp(void);
+    virtual bool IsMultiplayer(void);
+    virtual void PlayStartupVideos(void);
+    virtual void PlayAVIAndWait(const char *);
+    void AppActivate(bool);
+    virtual void SetCursorVisible(bool);
+  private:
+    void SetActiveApp(bool);
+};
+
+struct color24 {
+    byte r;
+    byte g;
+    byte b;
+};
+
+struct entity_state_s {
+    int entityType;
+    int number;
+    float msg_time;
+    int messagenum;
+    vec3_t origin;
+    vec3_t angles;
+    int modelindex;
+    int sequence;
+    float frame;
+    int colormap;
+    short skin;
+    short solid;
+    int effects;
+    float scale;
+    byte eflags;
+    int rendermode;
+    int renderamt;
+    color24 rendercolor;
+    int renderfx;
+    int movetype;
+    float animtime;
+    float framerate;
+    int body;
+    byte controller[4];
+    byte blending[4];
+    vec3_t velocity;
+    vec3_t mins;
+    vec3_t maxs;
+    int aiment;
+    int owner;
+    float friction;
+    float gravity;
+    int team;
+    int playerclass;
+    int health;
+    qboolean spectator;
+    int weaponmodel;
+    int gaitsequence;
+    vec3_t basevelocity;
+    int usehull;
+    int oldbuttons;
+    int onground;
+    int iStepLeft;
+    float flFallVelocity;
+    float fov;
+    int weaponanim;
+    vec3_t startpos;
+    vec3_t endpos;
+    float impacttime;
+    float starttime;
+    int iuser1;
+    int iuser2;
+    int iuser3;
+    int iuser4;
+    float fuser1;
+    float fuser2;
+    float fuser3;
+    float fuser4;
+    vec3_t vuser1;
+    vec3_t vuser2;
+    vec3_t vuser3;
+    vec3_t vuser4;
+};
+
+struct entity_state_t : public entity_state_s {};
+
+struct position_history_t {
+    float animtime;
+    vec3_t origin;
+    vec3_t angles;
+};
+
+struct mouth_t {
+    byte mouthopen;
+    byte sndcount;
+    int sndavg;
+};
+
+struct latchedvars_t {
+    float prevanimtime;
+    float sequencetime;
+    unsigned char prevseqblending[2];
+    vec3_t prevorigin;
+    vec3_t prevangles;
+    int prevsequence;
+    float prevframe;
+    unsigned char prevcontroller[4];
+    unsigned char prevblending[2];
+};
+
+struct dmodel_t {
+    float mins[3];
+    float maxs[3];
+    float origin[3];
+    int headnode[4];
+    int visleafs;
+    int firstface;
+    int numfaces;
+};
+
+struct mplane_s {
+    vec3_t normal;
+    float dist;
+    byte type;
+    byte signbits;
+    byte pad[2];
+};
+
+struct mplane_t : public mplane_s {};
+
+struct mnode_s {
+    int contents;
+    int visframe;
+    float minmaxs[6];
+    mnode_s *parent;
+    mplane_t *plane;
+    mnode_s *children[2];
+    unsigned short firstsurface;
+    unsigned short numsurfaces;
+};
+
+struct efrag_s {
+    mleaf_s *leaf;
+    efrag_s *leafnext;
+    cl_entity_s *entity;
+    efrag_s *entnext;
+};
+
+struct glpoly_s {
+    glpoly_s *next;
+    glpoly_s *chain;
+    int numverts;
+    int flags;
+    float verts[4][7];
+};
+
+struct glpoly_t : public glpoly_s {};
+
+struct texture_s {
+    char name[16];
+    unsigned int width;
+    unsigned int height;
+    int gl_texturenum;
+    msurface_s *texturechain;
+    int anim_total;
+    int anim_min;
+    int anim_max;
+    texture_s *anim_next;
+    texture_s *alternate_anims;
+    unsigned int offsets[4];
+    byte *pPal;
+};
+
+struct texture_t : public texture_s {};
+
+struct mtexinfo_t {
+    float vecs[2][4];
+    float mipadjust;
+    texture_t *texture;
+    int flags;
+};
+
+struct decal_s {
+    decal_s *pnext;
+    msurface_s *psurface;
+    float dx;
+    float dy;
+    float scale;
+    short texture;
+    short flags;
+    short entityIndex;
+};
+
+struct decal_t : public decal_s {};
+
+struct msurface_s {
+    int visframe;
+    mplane_t *plane;
+    int flags;
+    int firstedge;
+    int numedges;
+    short texturemins[2];
+    short extents[2];
+    int light_s;
+    int light_t;
+    glpoly_t *polys;
+    msurface_s *texturechain;
+    mtexinfo_t *texinfo;
+    int dlightframe;
+    int dlightbits;
+    int lightmaptexturenum;
+    byte styles[4];
+    int cached_light[4];
+    qboolean cached_dlight;
+    color24 *samples;
+    decal_t *pdecals;
+};
+
+struct msurface_t : public msurface_s {};
+
+struct mleaf_s {
+    int contents;
+    int visframe;
+    float minmaxs[6];
+    mnode_s *parent;
+    byte *compressed_vis;
+    efrag_s *efrags;
+    msurface_t **firstmarksurface;
+    int nummarksurfaces;
+    int key;
+    byte ambient_sound_level[4];
+};
+
+struct mleaf_t : public mleaf_s {};
+
+struct mvertex_t {
+    vec3_t position;
+};
+
+struct medge_t {
+    unsigned short v[2];
+    unsigned int cachededgeoffset;
+};
+
+struct mnode_t : public mnode_s {};
+
+struct dclipnode_t {
+    int planenum;
+    short children[2];
+};
+
+struct hull_s {
+    dclipnode_t *clipnodes;
+    mplane_t *planes;
+    int firstclipnode;
+    int lastclipnode;
+    vec3_t clip_mins;
+    vec3_t clip_maxs;
+};
+
+struct cache_user_s {
+    void *data;
+};
+
+struct cache_user_t : public cache_user_s {};
+
+struct model_s {
+    char name[64];
+    qboolean needload;
+    modtype_t type;
+    int numframes;
+    synctype_t synctype;
+    int flags;
+    vec3_t mins;
+    vec3_t maxs;
+    float radius;
+    int firstmodelsurface;
+    int nummodelsurfaces;
+    int numsubmodels;
+    dmodel_t *submodels;
+    int numplanes;
+    mplane_t *planes;
+    int numleafs;
+    mleaf_t *leafs;
+    int numvertexes;
+    mvertex_t *vertexes;
+    int numedges;
+    medge_t *edges;
+    int numnodes;
+    mnode_t *nodes;
+    int numtexinfo;
+    mtexinfo_t *texinfo;
+    int numsurfaces;
+    msurface_t *surfaces;
+    int numsurfedges;
+    int *surfedges;
+    int numclipnodes;
+    dclipnode_t *clipnodes;
+    int nummarksurfaces;
+    msurface_t **marksurfaces;
+    hull_s hulls[4];
+    int numtextures;
+    texture_t **textures;
+    byte *visdata;
+    color24 *lightdata;
+    char *entities;
+    cache_user_t cache;
+};
+
+struct colorVec {
+    unsigned int r;
+    unsigned int g;
+    unsigned int b;
+    unsigned int a;
+};
+
+struct cl_entity_s {
+    int index;
+    qboolean player;
+    entity_state_t baseline;
+    entity_state_t prevstate;
+    entity_state_t curstate;
+    int current_position;
+    position_history_t ph[64];
+    mouth_t mouth;
+    latchedvars_t latched;
+    float lastmove;
+    vec3_t origin;
+    vec3_t angles;
+    vec_t attachment[4][3];
+    int trivial_accept;
+    model_s *model;
+    efrag_s *efrag;
+    mnode_s *topnode;
+    float syncbase;
+    int visframe;
+    colorVec cvFloorColor;
 };
 
 #endif
