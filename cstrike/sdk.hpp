@@ -10,10 +10,13 @@ typedef int EOFFSET;
 typedef float vec_t;
 typedef unsigned int uint32;
 typedef unsigned int _size_t;
-typedef int CRC32_t;
-typedef unsigned long long uint64;
 #define size_t _size_t
 typedef unsigned char byte;
+typedef int CRC32_t;
+typedef unsigned long long uint64;
+typedef void *FileHandle_t;
+typedef int FileFindHandle_t;
+typedef int WaitForResourcesHandle_t;
 #ifdef _WIN32
 #include <Windows.h>
 #else
@@ -40,9 +43,17 @@ enum AutoBuyClassType {AUTOBUYCLASS_PRIMARY = 1, AUTOBUYCLASS_SECONDARY, AUTOBUY
 typedef enum {mod_brush, mod_sprite, mod_alias, mod_studio} modtype_t;
 typedef enum {ST_SYNC, ST_RAND} synctype_t;
 typedef enum {t_sound, t_skin, t_model, t_decal, t_generic, t_eventscript, t_world} resourcetype_t;
+typedef enum {FILESYSTEM_SEEK_HEAD, FILESYSTEM_SEEK_CURRENT, FILESYSTEM_SEEK_TAIL} FileSystemSeek_t;
+typedef enum {FILESYSTEM_WARNING_QUIET, FILESYSTEM_WARNING_REPORTUNCLOSED, FILESYSTEM_WARNING_REPORTUSAGE, FILESYSTEM_WARNING_REPORTALLACCESSES} FileWarningLevel_t;
 
 typedef void CSquadMonster;
 typedef void CWeaponBox;
+typedef void ObjectList;
+typedef void IWorld;
+typedef void IProxy;
+typedef void BitBuffer;
+typedef void DirectorCmd;
+typedef void IObjectContainer;
 
 class CBasePlayer;
 class EHANDLE;
@@ -151,6 +162,22 @@ struct event_info_t;
 struct event_state_s;
 struct event_state_t;
 struct client_state_t;
+class IBaseInterface;
+class ISystemModule;
+class IFileSystem;
+class IVGuiModule;
+class IBaseSystem;
+struct movevars_s;
+struct movevars_t;
+struct ref_params_s;
+struct ref_params_t;
+class IDemoPlayer;
+
+typedef IBaseInterface(*CreateInterfaceFn)(const char *, int *);
+
+namespace vgui2 {
+	typedef unsigned int VPANEL;
+}
 
 typedef struct entvars_s {
     string_t classname;
@@ -2123,6 +2150,251 @@ struct client_state_t {
     CRC32_t mapCRC;
     event_state_t events;
     char downloadUrl[128];
+};
+
+class IBaseInterface {
+  public:
+    ~IBaseInterface();
+};
+
+class ISystemModule : public IBaseInterface {
+  public:
+    ~ISystemModule();
+    virtual bool Init(IBaseSystem *, int, char *);
+    virtual void RunFrame(double);
+    virtual void ReceiveSignal(ISystemModule *, unsigned int, void *);
+    virtual void ExecuteCommand(int, char *);
+    virtual void RegisterListener(ISystemModule *);
+    virtual void RemoveListener(ISystemModule *);
+    virtual IBaseSystem * GetSystem(void);
+    virtual int GetSerial(void);
+    virtual char * GetStatusLine(void);
+    virtual char * GetType(void);
+    virtual char * GetName(void);
+    virtual int GetState(void);
+    virtual int GetVersion(void);
+    virtual void ShutDown(void);
+};
+
+class IFileSystem : public IBaseInterface {
+  public:
+    virtual void Mount(void);
+    virtual void Unmount(void);
+    virtual void RemoveAllSearchPaths(void);
+    virtual void AddSearchPath(const char *, const char *);
+    virtual bool RemoveSearchPath(const char *);
+    virtual void RemoveFile(const char *, const char *);
+    virtual void CreateDirHierarchy(const char *, const char *);
+    virtual bool FileExists(const char *);
+    virtual bool IsDirectory(const char *);
+    virtual FileHandle_t Open(const char *, const char *, const char *);
+    virtual void Close(FileHandle_t);
+    virtual void Seek(FileHandle_t, int, FileSystemSeek_t);
+    virtual unsigned int Tell(FileHandle_t);
+    virtual unsigned int Size(FileHandle_t);
+    virtual unsigned int Size(const char *);
+    virtual long GetFileTime(const char *);
+    virtual void FileTimeToString(char *, int, long);
+    virtual bool IsOk(FileHandle_t);
+    virtual void Flush(FileHandle_t);
+    virtual bool EndOfFile(FileHandle_t);
+    virtual int Read(void *, int, FileHandle_t);
+    virtual int Write(const void *, int, FileHandle_t);
+    virtual char * ReadLine(char *, int, FileHandle_t);
+    virtual int FPrintf(FileHandle_t, char *, ...);
+    virtual void * GetReadBuffer(FileHandle_t, int *, bool);
+    virtual void ReleaseReadBuffer(FileHandle_t, void *);
+    virtual const char * FindFirst(const char *, FileFindHandle_t *, const char *);
+    virtual const char * FindNext(FileFindHandle_t);
+    virtual bool FindIsDirectory(FileFindHandle_t);
+    virtual void FindClose(FileFindHandle_t);
+    virtual void GetLocalCopy(const char *);
+    virtual const char * GetLocalPath(const char *, char *, int);
+    virtual char * ParseFile(char *, char *, bool *);
+    virtual bool FullPathToRelativePath(const char *, char *);
+    virtual bool GetCurrentDirectory(char *, int);
+    virtual void PrintOpenedFiles(void);
+    virtual void SetWarningFunc(void (*)(const char *, ...));
+    virtual void SetWarningLevel(FileWarningLevel_t);
+    virtual void LogLevelLoadStarted(const char *);
+    virtual void LogLevelLoadFinished(const char *);
+    virtual int HintResourceNeed(const char *, int);
+    virtual int PauseResourcePreloading(void);
+    virtual int ResumeResourcePreloading(void);
+    virtual int SetVBuf(FileHandle_t, char *, int, long);
+    virtual void GetInterfaceVersion(char *, int);
+    virtual bool IsFileImmediatelyAvailable(const char *);
+    virtual WaitForResourcesHandle_t WaitForResources(const char *);
+    virtual bool GetWaitForResourcesProgress(WaitForResourcesHandle_t, float *, bool *);
+    virtual void CancelWaitForResources(WaitForResourcesHandle_t);
+    virtual bool IsAppReadyForOfflinePlay(int);
+    virtual bool AddPackFile(const char *, const char *);
+    virtual FileHandle_t OpenFromCacheForRead(const char *, const char *, const char *);
+    virtual void AddSearchPathNoWrite(const char *, const char *);
+};
+
+class IVGuiModule : public IBaseInterface {
+  public:
+    virtual bool Initialize(CreateInterfaceFn *, int);
+    virtual bool PostInitialize(CreateInterfaceFn *, int);
+    virtual bool Activate(void);
+    virtual bool IsValid(void);
+    virtual void Deactivate(void);
+    virtual void Reactivate(void);
+    virtual void Shutdown(void);
+    virtual vgui2::VPANEL GetPanel(void);
+    virtual void SetParent(vgui2::VPANEL);
+    virtual void RunFrame(void);
+};
+
+class IBaseSystem : public virtual ISystemModule {
+  public:
+    ~IBaseSystem();
+    virtual double GetTime(void);
+    virtual unsigned int GetTick(void);
+    virtual void SetFPS(float);
+    virtual void Printf(char *, ...);
+    virtual void DPrintf(char *, ...);
+    virtual void RedirectOutput(char *, int);
+    virtual IFileSystem * GetFileSystem(void);
+    virtual unsigned char * LoadFile(const char *, int *);
+    virtual void FreeFile(unsigned char *);
+    virtual void SetTitle(char *);
+    virtual void SetStatusLine(char *);
+    virtual void ShowConsole(bool);
+    virtual void LogConsole(char *);
+    virtual bool InitVGUI(IVGuiModule *);
+    virtual bool RegisterCommand(char *, ISystemModule *, int);
+    virtual void GetCommandMatches(char *, ObjectList *);
+    virtual void ExecuteString(char *);
+    virtual void ExecuteFile(char *);
+    virtual void Errorf(char *, ...);
+    virtual char * CheckParam(char *);
+    virtual bool AddModule(ISystemModule *, char *);
+    virtual ISystemModule * GetModule(char *, char *, char *);
+    virtual bool RemoveModule(ISystemModule *);
+    virtual void Stop(void);
+    virtual char * COM_GetBaseDir(void);
+};
+
+struct movevars_s {
+    float gravity;
+    float stopspeed;
+    float maxspeed;
+    float spectatormaxspeed;
+    float accelerate;
+    float airaccelerate;
+    float wateraccelerate;
+    float friction;
+    float edgefriction;
+    float waterfriction;
+    float entgravity;
+    float bounce;
+    float stepsize;
+    float maxvelocity;
+    float zmax;
+    float waveHeight;
+    qboolean footsteps;
+    char skyName[32];
+    float rollangle;
+    float rollspeed;
+    float skycolor_r;
+    float skycolor_g;
+    float skycolor_b;
+    float skyvec_x;
+    float skyvec_y;
+    float skyvec_z;
+};
+
+struct movevars_t : public movevars_s {};
+
+struct ref_params_s {
+    float vieworg[3];
+    float viewangles[3];
+    float forward[3];
+    float right[3];
+    float up[3];
+    float frametime;
+    float time;
+    int intermission;
+    int paused;
+    int spectator;
+    int onground;
+    int waterlevel;
+    float simvel[3];
+    float simorg[3];
+    float viewheight[3];
+    float idealpitch;
+    float cl_viewangles[3];
+    int health;
+    float crosshairangle[3];
+    float viewsize;
+    float punchangle[3];
+    int maxclients;
+    int viewentity;
+    int playernum;
+    int max_entities;
+    int demoplayback;
+    int hardware;
+    int smoothing;
+    usercmd_s *cmd;
+    movevars_s *movevars;
+    int viewport[4];
+    int nextView;
+    int onlyClientDraw;
+};
+
+struct ref_params_t : public ref_params_s {};
+
+class IDemoPlayer {
+  public:
+    ~IDemoPlayer();
+    virtual bool Init(IBaseSystem *, int, char *);
+    virtual void RunFrame(double);
+    virtual void ReceiveSignal(ISystemModule *, unsigned int, void *);
+    virtual void ExecuteCommand(int, char *);
+    virtual void RegisterListener(ISystemModule *);
+    virtual void RemoveListener(ISystemModule *);
+    virtual IBaseSystem * GetSystem(void);
+    virtual int GetSerial(void);
+    virtual char * GetStatusLine(void);
+    virtual char * GetType(void);
+    virtual char * GetName(void);
+    virtual int GetState(void);
+    virtual int GetVersion(void);
+    virtual void ShutDown(void);
+    virtual void NewGame(IWorld *, IProxy *);
+    virtual char * GetModName(void);
+    virtual void WriteCommands(BitBuffer *, float, float);
+    virtual int AddCommand(DirectorCmd *);
+    virtual bool RemoveCommand(int);
+    virtual DirectorCmd * GetLastCommand(void);
+    virtual IObjectContainer * GetCommands(void);
+    virtual void SetWorldTime(double, bool);
+    virtual void SetTimeScale(float);
+    virtual void SetPaused(bool);
+    virtual void SetEditMode(bool);
+    virtual void SetMasterMode(bool);
+    virtual bool IsPaused(void);
+    virtual bool IsLoading(void);
+    virtual bool IsActive(void);
+    virtual bool IsEditMode(void);
+    virtual bool IsMasterMode(void);
+    virtual void RemoveFrames(double, double);
+    virtual void ExecuteDirectorCmd(DirectorCmd *);
+    virtual double GetWorldTime(void);
+    virtual double GetStartTime(void);
+    virtual double GetEndTime(void);
+    virtual float GetTimeScale(void);
+    virtual IWorld * GetWorld(void);
+    virtual char * GetFileName(void);
+    virtual bool SaveGame(char *);
+    virtual bool LoadGame(char *);
+    virtual void Stop(void);
+    virtual void ForceHLTV(bool);
+    virtual void GetDemoViewInfo(ref_params_t *, float *, int *);
+    virtual int ReadDemoMessage(unsigned char *, int);
+    virtual void ReadNetchanState(int *, int *, int *, int *, int *, int *, int *);
 };
 
 #endif
