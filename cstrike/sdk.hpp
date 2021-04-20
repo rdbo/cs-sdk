@@ -10,6 +10,8 @@ typedef int EOFFSET;
 typedef float vec_t;
 typedef unsigned int uint32;
 typedef unsigned int _size_t;
+typedef int CRC32_t;
+typedef unsigned long long uint64;
 #define size_t _size_t
 typedef unsigned char byte;
 #ifdef _WIN32
@@ -37,6 +39,7 @@ typedef enum {PLAYER_IDLE, PLAYER_WALK, PLAYER_JUMP, PLAYER_SUPERJUMP, PLAYER_DI
 enum AutoBuyClassType {AUTOBUYCLASS_PRIMARY = 1, AUTOBUYCLASS_SECONDARY, AUTOBUYCLASS_AMMO = 4, AUTOBUYCLASS_ARMOR = 8, AUTOBUYCLASS_DEFUSER = 16, AUTOBUYCLASS_PISTOL = 32, AUTOBUYCLASS_SMG = 64, AUTOBUYCLASS_RIFLE = 128, AUTOBUYCLASS_SNIPERRIFLE = 256, AUTOBUYCLASS_SHOTGUN = 512, AUTOBUYCLASS_MACHINEGUN = 1024, AUTOBUYCLASS_GRENADE = 2048, AUTOBUYCLASS_NIGHTVISION = 4096, AUTOBUYCLASS_SHIELD = 8192};
 typedef enum {mod_brush, mod_sprite, mod_alias, mod_studio} modtype_t;
 typedef enum {ST_SYNC, ST_RAND} synctype_t;
+typedef enum {t_sound, t_skin, t_model, t_decal, t_generic, t_eventscript, t_world} resourcetype_t;
 
 typedef void CSquadMonster;
 typedef void CWeaponBox;
@@ -114,6 +117,40 @@ struct cache_user_t;
 struct model_s;
 struct colorVec;
 struct cl_entity_s;
+struct cl_entity_t;
+struct resource_s;
+struct resource_t;
+struct usercmd_s;
+struct usercmd_t;
+struct screenfade_s;
+struct screenfade_t;
+struct clientdata_s;
+struct clientdata_t;
+struct weapon_data_s;
+struct weapon_data_t;
+struct packet_entities_t;
+struct frame_t;
+struct cmd_t;
+struct local_state_s;
+struct local_state_t;
+struct event_s;
+struct sfx_s;
+struct sfx_t;
+struct consistency_s;
+struct consistency_t;
+struct dlight_s;
+struct dlight_t;
+struct customization_s;
+struct customization_t;
+struct player_info_s;
+struct player_info_t;
+struct event_args_s;
+struct event_args_t;
+struct event_info_s;
+struct event_info_t;
+struct event_state_s;
+struct event_state_t;
+struct client_state_t;
 
 typedef struct entvars_s {
     string_t classname;
@@ -1737,6 +1774,355 @@ struct cl_entity_s {
     float syncbase;
     int visframe;
     colorVec cvFloorColor;
+};
+
+struct cl_entity_t : public cl_entity_s {};
+
+struct resource_s {
+    char szFileName[64];
+    resourcetype_t type;
+    int nIndex;
+    int nDownloadSize;
+    unsigned char ucFlags;
+    unsigned char rgucMD5_hash[16];
+    unsigned char playernum;
+    unsigned char rguc_reserved[32];
+    resource_s *pNext;
+    resource_s *pPrev;
+};
+
+struct resource_t : public resource_s {};
+
+struct usercmd_s {
+    short lerp_msec;
+    byte msec;
+    vec3_t viewangles;
+    float forwardmove;
+    float sidemove;
+    float upmove;
+    byte lightlevel;
+    unsigned short buttons;
+    byte impulse;
+    byte weaponselect;
+    int impact_index;
+    vec3_t impact_position;
+};
+
+struct usercmd_t : public usercmd_s {};
+
+struct screenfade_s {
+    float fadeSpeed;
+    float fadeEnd;
+    float fadeTotalEnd;
+    float fadeReset;
+    byte fader;
+    byte fadeg;
+    byte fadeb;
+    byte fadealpha;
+    int fadeFlags;
+};
+
+struct screenfade_t : public screenfade_s {};
+
+struct clientdata_s {
+    vec3_t origin;
+    vec3_t velocity;
+    int viewmodel;
+    vec3_t punchangle;
+    int flags;
+    int waterlevel;
+    int watertype;
+    vec3_t view_ofs;
+    float health;
+    int bInDuck;
+    int weapons;
+    int flTimeStepSound;
+    int flDuckTime;
+    int flSwimTime;
+    int waterjumptime;
+    float maxspeed;
+    float fov;
+    int weaponanim;
+    int m_iId;
+    int ammo_shells;
+    int ammo_nails;
+    int ammo_cells;
+    int ammo_rockets;
+    float m_flNextAttack;
+    int tfstate;
+    int pushmsec;
+    int deadflag;
+    char physinfo[256];
+    int iuser1;
+    int iuser2;
+    int iuser3;
+    int iuser4;
+    float fuser1;
+    float fuser2;
+    float fuser3;
+    float fuser4;
+    vec3_t vuser1;
+    vec3_t vuser2;
+    vec3_t vuser3;
+    vec3_t vuser4;
+};
+
+struct clientdata_t : public clientdata_s {};
+
+struct weapon_data_s {
+    int m_iId;
+    int m_iClip;
+    float m_flNextPrimaryAttack;
+    float m_flNextSecondaryAttack;
+    float m_flTimeWeaponIdle;
+    int m_fInReload;
+    int m_fInSpecialReload;
+    float m_flNextReload;
+    float m_flPumpTime;
+    float m_fReloadTime;
+    float m_fAimedDamage;
+    float m_fNextAimBonus;
+    int m_fInZoom;
+    int m_iWeaponState;
+    int iuser1;
+    int iuser2;
+    int iuser3;
+    int iuser4;
+    float fuser1;
+    float fuser2;
+    float fuser3;
+    float fuser4;
+};
+
+struct weapon_data_t : public weapon_data_s {};
+
+struct packet_entities_t {
+    int num_entities;
+    unsigned char flags[32];
+    entity_state_s *entities;
+};
+
+struct frame_t {
+    double receivedtime;
+    double latency;
+    qboolean invalid;
+    qboolean choked;
+    entity_state_s playerstate[32];
+    double time;
+    clientdata_t clientdata;
+    weapon_data_s weapondata[64];
+    packet_entities_t packet_entities;
+    unsigned short clientbytes;
+    unsigned short playerinfobytes;
+    unsigned short packetentitybytes;
+    unsigned short tentitybytes;
+    unsigned short soundbytes;
+    unsigned short eventbytes;
+    unsigned short usrbytes;
+    unsigned short voicebytes;
+    unsigned short msgbytes;
+};
+
+struct cmd_t {
+    usercmd_t cmd;
+    float senttime;
+    float receivedtime;
+    float frame_lerp;
+    qboolean processedfuncs;
+    qboolean heldback;
+    int sendsize;
+};
+
+struct local_state_s {
+    entity_state_t playerstate;
+    clientdata_t client;
+    weapon_data_t weapondata[64];
+};
+
+struct local_state_t : public local_state_s {};
+
+struct event_s {
+    unsigned short index;
+    const char *filename;
+    int filesize;
+    const char *pszScript;
+};
+
+struct sfx_s {
+    char name[64];
+    cache_user_t cache;
+    int servercount;
+};
+
+struct sfx_t : public sfx_s {};
+
+struct consistency_s {
+    char *filename;
+    int issound;
+    int orig_index;
+    int value;
+    int check_type;
+    float mins[3];
+    float maxs[3];
+};
+
+struct consistency_t : public consistency_s {};
+
+struct dlight_s {
+    vec3_t origin;
+    float radius;
+    color24 color;
+    float die;
+    float decay;
+    float minlight;
+    int key;
+    qboolean dark;
+};
+
+struct dlight_t : public dlight_s {};
+
+struct customization_s {
+    qboolean bInUse;
+    resource_t resource;
+    qboolean bTranslated;
+    int nUserData1;
+    int nUserData2;
+    void *pInfo;
+    void *pBuffer;
+    customization_s *pNext;
+};
+
+struct customization_t : public customization_s {};
+
+struct player_info_s {
+    int userid;
+    char userinfo[256];
+    char name[32];
+    int spectator;
+    int ping;
+    int packet_loss;
+    char model[64];
+    int topcolor;
+    int bottomcolor;
+    int renderframe;
+    int gaitsequence;
+    float gaitframe;
+    float gaityaw;
+    vec3_t prevgaitorigin;
+    customization_t customdata;
+    char hashedcdkey[16];
+    uint64 m_nSteamID;
+};
+
+struct player_info_t : public player_info_s {};
+
+struct event_args_s {
+    int flags;
+    int entindex;
+    float origin[3];
+    float angles[3];
+    float velocity[3];
+    int ducking;
+    float fparam1;
+    float fparam2;
+    int iparam1;
+    int iparam2;
+    int bparam1;
+    int bparam2;
+};
+
+struct event_args_t : public event_args_s {};
+
+struct event_info_s {
+    unsigned short index;
+    short packet_index;
+    short entity_index;
+    float fire_time;
+    event_args_t args;
+    int flags;
+};
+
+struct event_info_t : public event_info_s {};
+
+struct event_state_s {
+    event_info_s ei[64];
+};
+
+struct event_state_t : public event_state_s {};
+
+struct client_state_t {
+    int max_edicts;
+    resource_t resourcesonhand;
+    resource_t resourcesneeded;
+    resource_s resourcelist[1280];
+    int num_resources;
+    qboolean need_force_consistency_response;
+    char serverinfo[512];
+    int servercount;
+    int validsequence;
+    int parsecount;
+    int parsecountmod;
+    int stats[32];
+    int weapons;
+    usercmd_t cmd;
+    vec3_t viewangles;
+    vec3_t punchangle;
+    vec3_t crosshairangle;
+    vec3_t simorg;
+    vec3_t simvel;
+    vec3_t simangles;
+    float predicted_origins[64][3];
+    vec3_t prediction_error;
+    float idealpitch;
+    vec3_t viewheight;
+    screenfade_t sf;
+    qboolean paused;
+    int onground;
+    int moving;
+    int waterlevel;
+    int usehull;
+    float maxspeed;
+    int pushmsec;
+    int light_level;
+    int intermission;
+    double mtime[2];
+    double time;
+    double oldtime;
+    frame_t frames[64];
+    cmd_t commands[64];
+    local_state_s predicted_frames[64];
+    int delta_sequence;
+    int playernum;
+    event_s event_precache[256];
+    model_s *model_precache[512];
+    int model_precache_count;
+    sfx_s *sound_precache[512];
+    consistency_s consistency_list[512];
+    int num_consistency;
+    int highentity;
+    char levelname[40];
+    int maxclients;
+    int gametype;
+    int viewentity;
+    model_s *worldmodel;
+    efrag_s *free_efrags;
+    int num_entities;
+    int num_statics;
+    cl_entity_t viewent;
+    int cdtrack;
+    int looptrack;
+    CRC32_t serverCRC;
+    unsigned char clientdllmd5[16];
+    float weaponstarttime;
+    int weaponsequence;
+    int fPrecaching;
+    dlight_t *pLight;
+    player_info_s players[32];
+    entity_state_s instanced_baseline[64];
+    int instanced_baseline_number;
+    CRC32_t mapCRC;
+    event_state_t events;
+    char downloadUrl[128];
 };
 
 #endif
